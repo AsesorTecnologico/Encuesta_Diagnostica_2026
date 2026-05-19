@@ -1,0 +1,849 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard · Niveles de logro (Carga Automática desde Google Sheets)</title>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+        body {
+            background: #f5fafd;
+            padding: 24px;
+        }
+        .dashboard {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .header {
+            margin-bottom: 25px;
+        }
+        .header h1 {
+            font-weight: 700;
+            font-size: 2.3rem;
+            color: #003153;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .header h1 i {
+            color: #1e6091;
+            background: #d1e7f5;
+            padding: 14px;
+            border-radius: 30px;
+        }
+        .header p {
+            color: #2e577a;
+            font-size: 1.1rem;
+            margin-top: 8px;
+            border-left: 6px solid #34a5a5;
+            padding-left: 20px;
+        }
+        /* Barra de conexión CSV - ahora solo informativa */
+        .csv-info {
+            background: #e8f2f9;
+            border-radius: 60px;
+            padding: 14px 30px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            border: 1px solid #bdd6eb;
+        }
+        .csv-info i {
+            font-size: 1.5rem;
+            color: #1e6091;
+        }
+        .csv-info span {
+            color: #1b4a66;
+            font-size: 0.95rem;
+        }
+        .csv-info .badge {
+            background: #1e6091;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .loading-indicator {
+            background: white;
+            border-radius: 40px;
+            padding: 12px 24px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #1e6091;
+            font-weight: 500;
+            display: none;
+        }
+        .loading-indicator.show {
+            display: block;
+        }
+        .filtros-nivel {
+            background: white;
+            border-radius: 60px;
+            padding: 14px 30px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 30px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            border: 1px solid #cde3f0;
+        }
+        .filtros-nivel span {
+            font-weight: 600;
+            color: #1b4a66;
+            font-size: 1.2rem;
+        }
+        .filtro-btns {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .btn-filtro {
+            border: none;
+            background: transparent;
+            padding: 10px 24px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.02);
+        }
+        .btn-filtro.todos { background: #e1ecf5; color: #1b4f6e; border-color: #98b9d2; }
+        .btn-filtro.inicio { background: #fad7d0; color: #a33f2f; border-color: #e59888; }
+        .btn-filtro.proceso { background: #fee7c8; color: #b86b2c; border-color: #f7bc6d; }
+        .btn-filtro.logrado { background: #fbf0b5; color: #8f7d2c; border-color: #ecd358; }
+        .btn-filtro.destacado { background: #c0e8d8; color: #0e7253; border-color: #6fc1a5; }
+        .btn-filtro.activo {
+            transform: scale(1.04);
+            border-width: 3px;
+            box-shadow: 0 8px 14px rgba(52, 165, 165, 0.2);
+        }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .kpi-card {
+            background: white;
+            border-radius: 30px;
+            padding: 24px 22px;
+            box-shadow: 0 15px 28px -16px #1d3f5e;
+            border: 1px solid #d0e2f2;
+        }
+        .kpi-title {
+            color: #2b5876;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .kpi-value {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: #0b3049;
+            line-height: 1.2;
+        }
+        .kpi-foot {
+            font-size: 0.95rem;
+            color: #4b6f8c;
+            margin-top: 10px;
+            border-top: 1px dashed #c0d6ea;
+            padding-top: 8px;
+        }
+        .charts-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 22px;
+            margin-bottom: 40px;
+        }
+        .chart-card {
+            background: white;
+            border-radius: 32px;
+            padding: 18px 16px 14px;
+            box-shadow: 0 12px 24px -14px #0f3850;
+            border: 1px solid #cde0ef;
+        }
+        .chart-title {
+            font-weight: 600;
+            color: #003d5b;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .chart-container {
+            position: relative;
+            height: 200px;
+            width: 100%;
+        }
+        .tabla-general-section {
+            background: white;
+            border-radius: 36px;
+            padding: 28px;
+            box-shadow: 0 22px 34px -20px #0a3b51;
+            border: 1px solid #b9d5ed;
+            margin-bottom: 40px;
+        }
+        .tabla-header-orden {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .tabla-header-orden h2 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #003153;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .tabla-header-orden h2 i {
+            color: #1e6091;
+            background: #d6e9f7;
+            padding: 12px;
+            border-radius: 24px;
+        }
+        .orden-controles {
+            display: flex;
+            gap: 10px;
+            background: #eef5fa;
+            padding: 6px 10px;
+            border-radius: 50px;
+            border: 1px solid #c5dcef;
+        }
+        .btn-orden {
+            background: transparent;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #1b4f6e;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-orden i {
+            font-size: 1rem;
+        }
+        .btn-orden:hover {
+            background: #d0e4f5;
+        }
+        .btn-orden.activo {
+            background: #1e6091;
+            color: white;
+            box-shadow: 0 4px 8px rgba(0,80,120,0.3);
+        }
+        .tabla-wrapper {
+            overflow-x: auto;
+            border-radius: 24px;
+            border: 1px solid #cde0ef;
+            background: #fbfdff;
+        }
+        .tabla-general {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+            min-width: 1100px;
+        }
+        .tabla-general th {
+            background: #e1effa;
+            color: #144a6f;
+            font-weight: 600;
+            padding: 16px 12px;
+            text-align: left;
+            border-bottom: 2px solid #b0cde0;
+            font-size: 0.95rem;
+        }
+        .tabla-general td {
+            padding: 14px 12px;
+            border-bottom: 1px solid #d4e4f2;
+            vertical-align: middle;
+        }
+        .tabla-general tbody tr:hover {
+            background: #f0f7fe;
+        }
+        .tabla-general .profesor-row {
+            display: table-row;
+        }
+        .tabla-general .profesor-row.filtro-oculto {
+            display: none;
+        }
+        .tabla-general .nivel-badge {
+            font-weight: 700;
+            border-radius: 40px;
+            padding: 6px 14px;
+            display: inline-block;
+            min-width: 130px;
+            text-align: center;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .tabla-general .nivel-badge.inicio { background: #f5c6b8; color: #8b3e2b; border-left: 4px solid #d9534f; }
+        .tabla-general .nivel-badge.proceso { background: #fad9a6; color: #9e601c; border-left: 4px solid #f0ad4e; }
+        .tabla-general .nivel-badge.logrado { background: #f9f0a3; color: #8a752b; border-left: 4px solid #e6c229; }
+        .tabla-general .nivel-badge.destacado { background: #b0e0c9; color: #1f6d4c; border-left: 4px solid #28a745; }
+        .promedio-individual {
+            font-weight: 700;
+            font-size: 1.05rem;
+            letter-spacing: 0.5px;
+            background: #f0f4f9;
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 30px;
+        }
+        .areas-container {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            margin-bottom: 50px;
+        }
+        .area-card {
+            background: white;
+            border-radius: 36px;
+            box-shadow: 0 22px 34px -20px #0a3b51;
+            overflow: hidden;
+            border: 1px solid #b9d5ed;
+        }
+        .area-header {
+            background: linear-gradient(98deg, #e3f0fa 0%, white 90%);
+            padding: 18px 32px;
+            border-bottom: 2px solid #b3d2eb;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .area-header i {
+            font-size: 2.4rem;
+            color: #1e6091;
+            background: #d6e9f7;
+            padding: 12px;
+            border-radius: 28px;
+        }
+        .area-header h2 {
+            font-size: 2.2rem;
+            font-weight: 600;
+            color: #0b3b53;
+        }
+        .plana-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 26px;
+            padding: 28px;
+        }
+        .plana-card {
+            background: #f9fdff;
+            border-radius: 28px;
+            border: 1px solid #c1daef;
+            overflow: hidden;
+            transition: 0.15s;
+        }
+        .plana-card:hover {
+            border-color: #34a5a5;
+            box-shadow: 0 12px 20px -12px #34a5a580;
+        }
+        .plana-titulo {
+            background: #e0effa;
+            padding: 16px 20px;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: #0e4b70;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .plana-titulo span {
+            background: #ffffffd6;
+            padding: 5px 16px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #0d4260;
+        }
+        .profesor-row {
+            display: grid;
+            grid-template-columns: 2fr 0.9fr 1.2fr 0.5fr;
+            padding: 14px 18px;
+            border-bottom: 1px solid #c7ddef;
+            align-items: center;
+            font-size: 0.98rem;
+        }
+        .profesor-row:last-child { border-bottom: none; }
+        .profesor-row.filtro-oculto { display: none; }
+        .profesor-nombre {
+            font-weight: 600;
+            color: #144a6f;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .encuestas { color: #28638b; font-weight: 500; }
+        .ponderado {
+            font-weight: 700;
+            border-radius: 40px;
+            padding: 5px 14px;
+            display: inline-block;
+            min-width: 85px;
+            font-size: 0.95rem;
+            text-align: center;
+        }
+        .ponderado.inicio { background: #f5c6b8; color: #8b3e2b; border-left: 5px solid #d9534f; }
+        .ponderado.proceso { background: #fad9a6; color: #9e601c; border-left: 5px solid #f0ad4e; }
+        .ponderado.logrado { background: #f9f0a3; color: #8a752b; border-left: 5px solid #e6c229; }
+        .ponderado.destacado { background: #b0e0c9; color: #1f6d4c; border-left: 5px solid #28a745; }
+        .orden {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #1f5880;
+            background: #e2f0fc;
+            border-radius: 50px;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            justify-self: end;
+        }
+        .footer-note {
+            margin-top: 30px;
+            text-align: center;
+            color: #5d7e9c;
+            font-size: 0.95rem;
+            border-top: 2px dashed #aac6e0;
+            padding-top: 26px;
+        }
+        .footer-note span {
+            display: inline-block;
+            margin: 0 6px;
+            padding: 3px 14px;
+            border-radius: 30px;
+            font-weight: 600;
+        }
+        @media (max-width: 900px) {
+            .charts-row { grid-template-columns: 1fr; }
+            .tabla-header-orden { flex-direction: column; align-items: flex-start; gap: 15px; }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="header">
+        <h1>
+            <i class="fas fa-chart-gantt"></i> 
+            Dashboard de Niveles de Logro
+        </h1>
+        <p>Rangos según PROMEDIO CON 5D: En Inicio (7.0 - 8.69) · En Proceso (8.70 - 8.99) · Logrado (9.0 - 9.70) · Logro Destacado (9.71 - 10.0)</p>
+    </div>
+
+    <!-- Información de conexión (solo informativo, sin input) -->
+    <div class="csv-info">
+        <i class="fa-solid fa-cloud-arrow-down"></i>
+        <span><strong>Fuente de datos:</strong> Google Sheets (conexión automática)</span>
+        <span class="badge"><i class="fa-regular fa-circle-check"></i> Carga automática</span>
+        <span><i class="fa-regular fa-clock"></i> Los datos se actualizan al recargar la página</span>
+    </div>
+
+    <div class="loading-indicator" id="loadingIndicator">
+        <i class="fa-solid fa-spinner fa-pulse"></i> Cargando datos desde Google Sheets...
+    </div>
+
+    <div class="filtros-nivel">
+        <span><i class="fa-regular fa-eye"></i> Filtrar por nivel:</span>
+        <div class="filtro-btns">
+            <button class="btn-filtro todos activo" data-filtro="todos">Todos</button>
+            <button class="btn-filtro inicio" data-filtro="inicio">En Inicio (7.0-8.69)</button>
+            <button class="btn-filtro proceso" data-filtro="proceso">En Proceso (8.70-8.99)</button>
+            <button class="btn-filtro logrado" data-filtro="logrado">Logrado (9.0-9.70)</button>
+            <button class="btn-filtro destacado" data-filtro="destacado">Logro Destacado (9.71-10.0)</button>
+        </div>
+    </div>
+
+    <div class="kpi-grid" id="kpiContainer"></div>
+
+    <div class="charts-row">
+        <div class="chart-card">
+            <div class="chart-title"><i class="fa-solid fa-chart-pie" style="color:#2a9d8f;"></i> Distribución global</div>
+            <div class="chart-container"><canvas id="categoriaChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title"><i class="fa-solid fa-chart-bar" style="color:#e76f51;"></i> Niveles por área</div>
+            <div class="chart-container"><canvas id="nivelesAreaChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title"><i class="fa-solid fa-chart-column" style="color:#f4a261;"></i> Promedio por plana (top 6)</div>
+            <div class="chart-container"><canvas id="planaChart"></canvas></div>
+        </div>
+    </div>
+
+    <div class="tabla-general-section">
+        <div class="tabla-header-orden">
+            <h2>
+                <i class="fa-solid fa-table"></i> 
+                Vista general · Todos los registros por plana
+            </h2>
+            <div class="orden-controles">
+                <button id="ordenOriginalBtn" class="btn-orden activo" title="Orden original (área, plana, orden)">
+                    <i class="fa-solid fa-arrow-up-wide-short"></i> Original
+                </button>
+                <button id="ordenPromAscBtn" class="btn-orden" title="Promedio ascendente">
+                    <i class="fa-solid fa-arrow-up-1-9"></i> Prom. ↑
+                </button>
+                <button id="ordenPromDescBtn" class="btn-orden" title="Promedio descendente">
+                    <i class="fa-solid fa-arrow-down-9-1"></i> Prom. ↓
+                </button>
+            </div>
+        </div>
+        <div class="tabla-wrapper">
+            <table class="tabla-general" id="tablaGeneral">
+                <thead>
+                    <tr>
+                        <th>Área</th>
+                        <th>Plana</th>
+                        <th>Profesor</th>
+                        <th>Cant. Encuestas</th>
+                        <th>Promedio (5D)</th>
+                        <th>Nivel de logro</th>
+                        <th>Orden Plana</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="areas-container" id="areasContainer"></div>
+
+    <div class="footer-note">
+        <i class="fa-regular fa-gem"></i> Niveles de logro según PROMEDIO CON 5D: 
+        <span style="background:#f5c6b8;">En Inicio (7.0-8.69)</span>
+        <span style="background:#fad9a6;">En Proceso (8.70-8.99)</span>
+        <span style="background:#f9f0a3;">Logrado (9.0-9.70)</span>
+        <span style="background:#b0e0c9;">Logro Destacado (9.71-10.0)</span>
+    </div>
+</div>
+
+<script>
+(function() {
+    // ============================================================
+    // URL PÚBLICA DEL CSV - YA INCLUIDA DIRECTAMENTE EN EL CÓDIGO
+    // ============================================================
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQD62Fz6hXhQahkgmdfRNv4GTAAsQXjK4qL5NqELZ3DIZQxKsLs9WnSMcNFW9qgwCHfTfD3BvZa8say/pub?output=csv";
+    
+    let profesores = [];
+    let profesoresOriginal = [];
+
+    // Rangos actualizados: >=7 y <8.7 -> inicio; >=8.7 y <9 -> proceso; >=9 y <9.71 -> logrado; >=9.71 y <=10 -> destacado
+    function obtenerNivel(promedio) {
+        if (promedio >= 7.0 && promedio < 8.7) return 'inicio';
+        if (promedio >= 8.7 && promedio < 9.0) return 'proceso';
+        if (promedio >= 9.0 && promedio < 9.71) return 'logrado';
+        if (promedio >= 9.71 && promedio <= 10.0) return 'destacado';
+        return 'inicio';
+    }
+
+    function parseCSV(texto) {
+        const lineas = texto.split('\n');
+        if (lineas.length === 0) return [];
+        const encabezados = parseCSVLinea(lineas[0]);
+        
+        const idxArea = encabezados.findIndex(h => h.trim().toUpperCase().includes('AREA'));
+        const idxPlana = encabezados.findIndex(h => h.trim().toUpperCase().includes('PLANA'));
+        const idxProfesor = encabezados.findIndex(h => h.trim().toUpperCase().includes('PROFESOR'));
+        const idxEncuestas = encabezados.findIndex(h => h.trim().toUpperCase().includes('CANTIDAD DE ENCUESTAS') || h.trim().toUpperCase().includes('ENCUESTAS'));
+        const idxPromedio = encabezados.findIndex(h => h.trim().toUpperCase().includes('PROMEDIO CON 5D') || h.trim().toUpperCase().includes('PROMEDIO'));
+        const idxOrden = encabezados.findIndex(h => h.trim().toUpperCase().includes('ORDEN PLANA') || h.trim().toUpperCase().includes('ORDEN'));
+
+        if (idxArea === -1 || idxPlana === -1 || idxProfesor === -1 || idxEncuestas === -1 || idxPromedio === -1 || idxOrden === -1) {
+            console.warn('No se encontraron todas las columnas necesarias.', encabezados);
+            return [];
+        }
+
+        const datos = [];
+        for (let i = 1; i < lineas.length; i++) {
+            if (lineas[i].trim() === '') continue;
+            const celdas = parseCSVLinea(lineas[i]);
+            if (celdas.length < encabezados.length) continue;
+
+            const area = celdas[idxArea]?.trim() || '';
+            const plana = celdas[idxPlana]?.trim() || '';
+            const profesor = celdas[idxProfesor]?.trim() || '';
+            const encuestasStr = (celdas[idxEncuestas] || '').replace(/[^0-9.]/g, '');
+            const encuestas = Number(encuestasStr);
+            let promedioStr = celdas[idxPromedio] || '';
+            promedioStr = promedioStr.replace(',', '.').replace(/[^0-9.]/g, '');
+            const promedio = Number(promedioStr);
+            const ordenStr = (celdas[idxOrden] || '').replace(/[^0-9]/g, '');
+            const orden = Number(ordenStr);
+
+            if (area && plana && profesor && !isNaN(promedio) && !isNaN(encuestas) && promedio >= 0) {
+                datos.push({
+                    area, plana, profesor, encuestas, promedio,
+                    orden: orden || 0,
+                    categoria: obtenerNivel(promedio)
+                });
+            }
+        }
+        console.log(`CSV parseado: ${datos.length} registros cargados`);
+        return datos;
+    }
+
+    function parseCSVLinea(linea) {
+        const resultado = [];
+        let dentroComillas = false;
+        let campoActual = '';
+        for (let i = 0; i < linea.length; i++) {
+            const char = linea[i];
+            if (char === '"') {
+                dentroComillas = !dentroComillas;
+            } else if (char === ',' && !dentroComillas) {
+                resultado.push(campoActual);
+                campoActual = '';
+            } else {
+                campoActual += char;
+            }
+        }
+        resultado.push(campoActual);
+        return resultado;
+    }
+
+    // Datos de ejemplo (fallback)
+    const datosEjemplo = (function generarEjemplo() {
+        const areasPlanas = {
+            'Matemática': ['Álgebra', 'Aritmética', 'Geometría', 'Razonamiento Matemático', 'Trigonometría'],
+            'Comunicación': ['Lenguaje', 'Literatura', 'Razonamiento Verbal', 'Teatro'],
+            'Ciencias Sociales': ['Economía', 'Geografía', 'Historia del Perú', 'Historia Universal', 'Psicología', 'Valores'],
+            'Ciencia y Tecnología': ['Biología', 'Física', 'Química']
+        };
+        const nombres = ['Carlos López', 'María García', 'Juan Pérez', 'Ana Torres', 'Luis Fernández', 'Sofía Martínez', 'Diego Castro', 'Valentina Ríos'];
+        const ej = [];
+        Object.entries(areasPlanas).forEach(([area, planas]) => {
+            planas.forEach(plana => {
+                const num = 2 + Math.floor(Math.random() * 3);
+                for (let i = 0; i < num; i++) {
+                    const prom = +(Math.random() * (10 - 7) + 7).toFixed(2);
+                    ej.push({
+                        area, plana,
+                        profesor: nombres[Math.floor(Math.random() * nombres.length)] + ' ' + (i+1),
+                        encuestas: 20 + Math.floor(Math.random() * 50),
+                        promedio: prom,
+                        orden: i+1,
+                        categoria: obtenerNivel(prom)
+                    });
+                }
+            });
+        });
+        ej.sort((a,b) => a.area.localeCompare(b.area) || a.plana.localeCompare(b.plana) || a.orden - b.orden);
+        return ej;
+    })();
+
+    function renderDashboard(datos) {
+        profesores = datos;
+        profesoresOriginal = [...datos];
+
+        const totalDocentes = profesores.length;
+        const totalEncuestas = profesores.reduce((acc, p) => acc + p.encuestas, 0);
+        const promedioGlobal = totalDocentes > 0 ? (profesores.reduce((acc, p) => acc + p.promedio, 0) / totalDocentes).toFixed(2) : "0.00";
+        const countInicio = profesores.filter(p => p.categoria === 'inicio').length;
+        const countProceso = profesores.filter(p => p.categoria === 'proceso').length;
+        const countLogrado = profesores.filter(p => p.categoria === 'logrado').length;
+        const countDestacado = profesores.filter(p => p.categoria === 'destacado').length;
+
+        document.getElementById('kpiContainer').innerHTML = `
+            <div class="kpi-card"><div class="kpi-title"><i class="fa-regular fa-user"></i> Docentes</div><div class="kpi-value">${totalDocentes}</div><div class="kpi-foot">registros</div></div>
+            <div class="kpi-card"><div class="kpi-title"><i class="fa-regular fa-clipboard"></i> Encuestas</div><div class="kpi-value">${totalEncuestas}</div><div class="kpi-foot">totales</div></div>
+            <div class="kpi-card"><div class="kpi-title"><i class="fa-regular fa-star"></i> Promedio global</div><div class="kpi-value">${promedioGlobal}</div><div class="kpi-foot">/10</div></div>
+            <div class="kpi-card"><div class="kpi-title"><i class="fa-regular fa-chart-line"></i> Inicio · Proceso · Logrado · Destacado</div><div class="kpi-value">${countInicio} · ${countProceso} · ${countLogrado} · ${countDestacado}</div><div class="kpi-foot">distribución</div></div>
+        `;
+
+        const ctx1 = document.getElementById('categoriaChart').getContext('2d');
+        if (window.categoriaChart instanceof Chart) window.categoriaChart.destroy();
+        window.categoriaChart = new Chart(ctx1, {
+            type: 'doughnut',
+            data: {
+                labels: ['En Inicio (7.0-8.69)', 'En Proceso (8.70-8.99)', 'Logrado (9.0-9.70)', 'Logro Destacado (9.71-10.0)'],
+                datasets: [{ data: [countInicio, countProceso, countLogrado, countDestacado], backgroundColor: ['#d9534f', '#f0ad4e', '#e6c229', '#28a745'], borderColor: 'white', borderWidth: 4 }]
+            },
+            options: { cutout: '65%', responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 14 } } } }
+        });
+
+        const areas = [...new Set(profesores.map(p => p.area))].sort();
+        const inicioPorArea = areas.map(area => profesores.filter(p => p.area === area && p.categoria === 'inicio').length);
+        const procesoPorArea = areas.map(area => profesores.filter(p => p.area === area && p.categoria === 'proceso').length);
+        const logradoPorArea = areas.map(area => profesores.filter(p => p.area === area && p.categoria === 'logrado').length);
+        const destacadoPorArea = areas.map(area => profesores.filter(p => p.area === area && p.categoria === 'destacado').length);
+
+        const ctx2 = document.getElementById('nivelesAreaChart').getContext('2d');
+        if (window.nivelesAreaChart instanceof Chart) window.nivelesAreaChart.destroy();
+        window.nivelesAreaChart = new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: areas,
+                datasets: [
+                    { label: 'En Inicio', data: inicioPorArea, backgroundColor: '#d9534f', borderRadius: 6 },
+                    { label: 'En Proceso', data: procesoPorArea, backgroundColor: '#f0ad4e', borderRadius: 6 },
+                    { label: 'Logrado', data: logradoPorArea, backgroundColor: '#e6c229', borderRadius: 6 },
+                    { label: 'Logro Destacado', data: destacadoPorArea, backgroundColor: '#28a745', borderRadius: 6 }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } } }
+        });
+
+        const planasPromMap = new Map();
+        profesores.forEach(p => {
+            const key = `${p.area} - ${p.plana}`;
+            if (!planasPromMap.has(key)) planasPromMap.set(key, { suma: 0, count: 0 });
+            const item = planasPromMap.get(key);
+            item.suma += p.promedio;
+            item.count++;
+        });
+        const planasProm = Array.from(planasPromMap.entries()).map(([nombre, {suma, count}]) => ({ nombre, promedio: (suma / count).toFixed(2) })).sort((a,b) => b.promedio - a.promedio).slice(0, 6);
+        const ctx3 = document.getElementById('planaChart').getContext('2d');
+        if (window.planaChart instanceof Chart) window.planaChart.destroy();
+        window.planaChart = new Chart(ctx3, {
+            type: 'bar',
+            data: { labels: planasProm.map(p => p.nombre.length > 18 ? p.nombre.substring(0,16)+'…' : p.nombre), datasets: [{ label: 'Promedio (escala 10)', data: planasProm.map(p => p.promedio), backgroundColor: '#3b9dc3', borderRadius: 8 }] },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { max: 10, min: 0 } } }
+        });
+
+        actualizarTabla(profesores);
+        renderizarTarjetas(profesoresOriginal);
+    }
+
+    function actualizarTabla(datosOrdenados) {
+        const tablaBody = document.getElementById('tablaBody');
+        let tablaFilas = '';
+        datosOrdenados.forEach(prof => {
+            const catClass = prof.categoria;
+            const nivelTexto = { inicio: 'En Inicio', proceso: 'En Proceso', logrado: 'Logrado', destacado: 'Logro Destacado' }[prof.categoria] || prof.categoria;
+            tablaFilas += `
+                <tr class="profesor-row" data-categoria="${prof.categoria}">
+                    <td>${prof.area}</td>
+                    <td>${prof.plana}</td>
+                    <td><i class="fa-regular fa-circle-user" style="margin-right:6px;"></i>${prof.profesor}</td>
+                    <td>${prof.encuestas}</td>
+                    <td><span class="promedio-individual">${prof.promedio.toFixed(2)}</span></td>
+                    <td><span class="nivel-badge ${catClass}">${nivelTexto}</span></td>
+                    <td>#${prof.orden}</td>
+                </table>
+            `;
+        });
+        tablaBody.innerHTML = tablaFilas;
+        const filtroActivo = document.querySelector('.btn-filtro.activo')?.dataset.filtro || 'todos';
+        aplicarFiltro(filtroActivo);
+    }
+
+    function renderizarTarjetas(datosOriginales) {
+        const areasContainer = document.getElementById('areasContainer');
+        const areasUnicas = [...new Set(datosOriginales.map(p => p.area))].sort();
+        let areasHtml = '';
+        areasUnicas.forEach(area => {
+            const planasEnArea = [...new Set(datosOriginales.filter(p => p.area === area).map(p => p.plana))].sort();
+            let planasHtml = '<div class="plana-grid">';
+            planasEnArea.forEach(plana => {
+                const profesPlana = datosOriginales.filter(p => p.area === area && p.plana === plana).sort((a,b) => a.orden - b.orden);
+                let filas = '';
+                profesPlana.forEach(prof => {
+                    const catClass = prof.categoria;
+                    const nivelTexto = { inicio: 'En Inicio', proceso: 'En Proceso', logrado: 'Logrado', destacado: 'Logro Destacado' }[prof.categoria];
+                    filas += `
+                        <div class="profesor-row" data-categoria="${prof.categoria}">
+                            <div class="profesor-nombre"><i class="fa-regular fa-circle-user"></i> ${prof.profesor}</div>
+                            <div class="encuestas"><i class="fa-regular fa-file-lines"></i> ${prof.encuestas}</div>
+                            <div><span class="ponderado ${catClass}" title="${nivelTexto}">${prof.promedio.toFixed(2)}</span></div>
+                            <div class="orden">#${prof.orden}</div>
+                        </div>
+                    `;
+                });
+                const promedioPlana = profesPlana.length > 0 ? (profesPlana.reduce((acc, p) => acc + p.promedio, 0) / profesPlana.length).toFixed(2) : "0.00";
+                planasHtml += `
+                    <div class="plana-card">
+                        <div class="plana-titulo">
+                            ${plana}
+                            <span><i class="fa-regular fa-star"></i> prom ${promedioPlana}</span>
+                        </div>
+                        <div class="plana-tabla">${filas}</div>
+                    </div>
+                `;
+            });
+            planasHtml += '</div>';
+            areasHtml += `<div class="area-card"><div class="area-header"><i class="fa-solid fa-chart-simple"></i><h2>${area}</h2></div>${planasHtml}</div>`;
+        });
+        areasContainer.innerHTML = areasHtml;
+    }
+
+    function aplicarFiltro(categoria) {
+        document.querySelectorAll('.btn-filtro').forEach(btn => {
+            const filtro = btn.dataset.filtro;
+            if (filtro === categoria) btn.classList.add('activo');
+            else btn.classList.remove('activo');
+        });
+        document.querySelectorAll('.profesor-row').forEach(fila => {
+            if (categoria === 'todos') fila.classList.remove('filtro-oculto');
+            else fila.classList.toggle('filtro-oculto', fila.dataset.categoria !== categoria);
+        });
+    }
+
+    function ordenarPorOriginal() { document.querySelectorAll('.btn-orden').forEach(btn => btn.classList.remove('activo')); document.getElementById('ordenOriginalBtn').classList.add('activo'); actualizarTabla(profesoresOriginal); }
+    function ordenarPorPromedioAsc() { document.querySelectorAll('.btn-orden').forEach(btn => btn.classList.remove('activo')); document.getElementById('ordenPromAscBtn').classList.add('activo'); const copia = [...profesoresOriginal]; copia.sort((a, b) => a.promedio - b.promedio); actualizarTabla(copia); }
+    function ordenarPorPromedioDesc() { document.querySelectorAll('.btn-orden').forEach(btn => btn.classList.remove('activo')); document.getElementById('ordenPromDescBtn').classList.add('activo'); const copia = [...profesoresOriginal]; copia.sort((a, b) => b.promedio - a.promedio); actualizarTabla(copia); }
+
+    async function cargarDatosDesdeURL() {
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        loadingIndicator.classList.add('show');
+        try {
+            const response = await fetch(CSV_URL);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const csvText = await response.text();
+            const datos = parseCSV(csvText);
+            if (datos.length === 0) {
+                console.warn('No se encontraron datos en el CSV, usando datos de ejemplo');
+                renderDashboard(datosEjemplo);
+            } else {
+                renderDashboard(datos);
+            }
+        } catch (e) {
+            console.error('Error cargando CSV:', e);
+            alert('No se pudieron cargar los datos desde Google Sheets. Se mostrarán datos de ejemplo.\nVerifica que la hoja esté publicada como CSV.');
+            renderDashboard(datosEjemplo);
+        } finally {
+            loadingIndicator.classList.remove('show');
+        }
+    }
+
+    // Eventos
+    document.querySelectorAll('.btn-filtro').forEach(btn => btn.addEventListener('click', (e) => aplicarFiltro(e.currentTarget.dataset.filtro)));
+    document.getElementById('ordenOriginalBtn').addEventListener('click', ordenarPorOriginal);
+    document.getElementById('ordenPromAscBtn').addEventListener('click', ordenarPorPromedioAsc);
+    document.getElementById('ordenPromDescBtn').addEventListener('click', ordenarPorPromedioDesc);
+
+    // Carga automática al iniciar
+    cargarDatosDesdeURL();
+})();
+</script>
+</body>
+</html>
