@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -48,7 +47,6 @@
             border-left: 6px solid #34a5a5;
             padding-left: 20px;
         }
-        /* Barra de conexión CSV - ahora solo informativa */
         .csv-info {
             background: #e8f2f9;
             border-radius: 60px;
@@ -90,7 +88,7 @@
         .loading-indicator.show {
             display: block;
         }
-        .filtros-nivel {
+        .filtros-container {
             background: white;
             border-radius: 60px;
             padding: 14px 30px;
@@ -98,31 +96,37 @@
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 30px;
+            justify-content: space-between;
+            gap: 20px;
             box-shadow: 0 10px 20px rgba(0,0,0,0.05);
             border: 1px solid #cde3f0;
+        }
+        .filtros-nivel {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 20px;
         }
         .filtros-nivel span {
             font-weight: 600;
             color: #1b4a66;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
         }
         .filtro-btns {
             display: flex;
-            gap: 15px;
+            gap: 12px;
             flex-wrap: wrap;
         }
         .btn-filtro {
             border: none;
             background: transparent;
-            padding: 10px 24px;
+            padding: 8px 20px;
             border-radius: 40px;
             font-weight: 600;
-            font-size: 1rem;
+            font-size: 0.9rem;
             cursor: pointer;
             transition: all 0.2s;
             border: 2px solid transparent;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.02);
         }
         .btn-filtro.todos { background: #e1ecf5; color: #1b4f6e; border-color: #98b9d2; }
         .btn-filtro.inicio { background: #fad7d0; color: #a33f2f; border-color: #e59888; }
@@ -130,9 +134,53 @@
         .btn-filtro.logrado { background: #fbf0b5; color: #8f7d2c; border-color: #ecd358; }
         .btn-filtro.destacado { background: #c0e8d8; color: #0e7253; border-color: #6fc1a5; }
         .btn-filtro.activo {
-            transform: scale(1.04);
+            transform: scale(1.02);
             border-width: 3px;
-            box-shadow: 0 8px 14px rgba(52, 165, 165, 0.2);
+            box-shadow: 0 4px 10px rgba(52, 165, 165, 0.2);
+        }
+        .filtro-plana {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #eef5fa;
+            padding: 5px 20px;
+            border-radius: 50px;
+        }
+        .filtro-plana label {
+            font-weight: 600;
+            color: #1b4a66;
+            font-size: 0.95rem;
+        }
+        .filtro-plana select {
+            padding: 8px 16px;
+            border-radius: 40px;
+            border: 1px solid #bdd6eb;
+            background: white;
+            font-weight: 500;
+            color: #1b4f6e;
+            cursor: pointer;
+            outline: none;
+            min-width: 180px;
+        }
+        .filtro-plana select:focus {
+            border-color: #34a5a5;
+        }
+        .reset-filtros {
+            background: #e1ecf5;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-weight: 600;
+            color: #1b4f6e;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .reset-filtros:hover {
+            background: #cde0ef;
+            transform: scale(0.98);
         }
         .kpi-grid {
             display: grid;
@@ -385,7 +433,7 @@
             font-weight: 500;
             color: #0d4260;
         }
-        .profesor-row {
+        .profesor-row-card {
             display: grid;
             grid-template-columns: 2fr 0.9fr 1.2fr 0.5fr;
             padding: 14px 18px;
@@ -393,8 +441,8 @@
             align-items: center;
             font-size: 0.98rem;
         }
-        .profesor-row:last-child { border-bottom: none; }
-        .profesor-row.filtro-oculto { display: none; }
+        .profesor-row-card:last-child { border-bottom: none; }
+        .profesor-row-card.filtro-oculto { display: none; }
         .profesor-nombre {
             font-weight: 600;
             color: #144a6f;
@@ -447,6 +495,15 @@
         @media (max-width: 900px) {
             .charts-row { grid-template-columns: 1fr; }
             .tabla-header-orden { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .filtros-container { flex-direction: column; align-items: stretch; }
+            .filtro-plana { justify-content: space-between; }
+        }
+        .filtros-activos {
+            font-size: 0.8rem;
+            color: #1e6091;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #cde3f0;
         }
     </style>
 </head>
@@ -460,7 +517,6 @@
         <p>Rangos según PROMEDIO CON 5D: En Inicio (7.0 - 8.69) · En Proceso (8.70 - 8.99) · Logrado (9.0 - 9.70) · Logro Destacado (9.71 - 10.0)</p>
     </div>
 
-    <!-- Información de conexión (solo informativo, sin input) -->
     <div class="csv-info">
         <i class="fa-solid fa-cloud-arrow-down"></i>
         <span><strong>Fuente de datos:</strong> Google Sheets (conexión automática)</span>
@@ -472,15 +528,24 @@
         <i class="fa-solid fa-spinner fa-pulse"></i> Cargando datos desde Google Sheets...
     </div>
 
-    <div class="filtros-nivel">
-        <span><i class="fa-regular fa-eye"></i> Filtrar por nivel:</span>
-        <div class="filtro-btns">
-            <button class="btn-filtro todos activo" data-filtro="todos">Todos</button>
-            <button class="btn-filtro inicio" data-filtro="inicio">En Inicio (7.0-8.69)</button>
-            <button class="btn-filtro proceso" data-filtro="proceso">En Proceso (8.70-8.99)</button>
-            <button class="btn-filtro logrado" data-filtro="logrado">Logrado (9.0-9.70)</button>
-            <button class="btn-filtro destacado" data-filtro="destacado">Logro Destacado (9.71-10.0)</button>
+    <div class="filtros-container">
+        <div class="filtros-nivel">
+            <span><i class="fa-regular fa-eye"></i> Nivel:</span>
+            <div class="filtro-btns">
+                <button class="btn-filtro todos activo" data-filtro="todos">Todos</button>
+                <button class="btn-filtro inicio" data-filtro="inicio">En Inicio</button>
+                <button class="btn-filtro proceso" data-filtro="proceso">En Proceso</button>
+                <button class="btn-filtro logrado" data-filtro="logrado">Logrado</button>
+                <button class="btn-filtro destacado" data-filtro="destacado">Destacado</button>
+            </div>
         </div>
+        <div class="filtro-plana">
+            <label><i class="fa-regular fa-layer-group"></i> Plana:</label>
+            <select id="filtroPlanaSelect">
+                <option value="__ALL__">Todas las planas</option>
+            </select>
+        </div>
+        <button id="resetFiltrosBtn" class="reset-filtros"><i class="fa-regular fa-arrows-rotate"></i> Resetear filtros</button>
     </div>
 
     <div class="kpi-grid" id="kpiContainer"></div>
@@ -507,7 +572,7 @@
                 Vista general · Todos los registros por plana
             </h2>
             <div class="orden-controles">
-                <button id="ordenOriginalBtn" class="btn-orden activo" title="Orden original (área, plana, orden)">
+                <button id="ordenOriginalBtn" class="btn-orden activo" title="Orden original">
                     <i class="fa-solid fa-arrow-up-wide-short"></i> Original
                 </button>
                 <button id="ordenPromAscBtn" class="btn-orden" title="Promedio ascendente">
@@ -521,15 +586,7 @@
         <div class="tabla-wrapper">
             <table class="tabla-general" id="tablaGeneral">
                 <thead>
-                    <tr>
-                        <th>Área</th>
-                        <th>Plana</th>
-                        <th>Profesor</th>
-                        <th>Cant. Encuestas</th>
-                        <th>Promedio (5D)</th>
-                        <th>Nivel de logro</th>
-                        <th>Orden Plana</th>
-                    </tr>
+                    <tr><th>Área</th><th>Plana</th><th>Profesor</th><th>Cant. Encuestas</th><th>Promedio (5D)</th><th>Nivel de logro</th><th>Orden Plana</th></tr>
                 </thead>
                 <tbody id="tablaBody"></tbody>
             </table>
@@ -549,21 +606,38 @@
 
 <script>
 (function() {
-    // ============================================================
-    // URL PÚBLICA DEL CSV - YA INCLUIDA DIRECTAMENTE EN EL CÓDIGO
-    // ============================================================
-    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQD62Fz6hXhQahkgmdfRNv4GTAAsQXjK4qL5NqELZ3DIZQxKsLs9WnSMcNFW9qgwCHfTfD3BvZa8say/pub?output=csv";
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6zIG_k7SoFlUe62yV5bYVEFsCEL7MbgYhkWdlykGCxA0r8urmGvPUGWukhK2MhthNxvDgVIDMarnK/pub?output=csv";
     
     let profesores = [];
     let profesoresOriginal = [];
+    let currentPlanaFilter = "__ALL__";
+    let currentNivelFilter = "todos";
 
-    // Rangos actualizados: >=7 y <8.7 -> inicio; >=8.7 y <9 -> proceso; >=9 y <9.71 -> logrado; >=9.71 y <=10 -> destacado
     function obtenerNivel(promedio) {
         if (promedio >= 7.0 && promedio < 8.7) return 'inicio';
         if (promedio >= 8.7 && promedio < 9.0) return 'proceso';
         if (promedio >= 9.0 && promedio < 9.71) return 'logrado';
         if (promedio >= 9.71 && promedio <= 10.0) return 'destacado';
         return 'inicio';
+    }
+
+    function parseCSVLinea(linea) {
+        const resultado = [];
+        let dentroComillas = false;
+        let campoActual = '';
+        for (let i = 0; i < linea.length; i++) {
+            const char = linea[i];
+            if (char === '"') {
+                dentroComillas = !dentroComillas;
+            } else if (char === ',' && !dentroComillas) {
+                resultado.push(campoActual);
+                campoActual = '';
+            } else {
+                campoActual += char;
+            }
+        }
+        resultado.push(campoActual);
+        return resultado;
     }
 
     function parseCSV(texto) {
@@ -573,7 +647,7 @@
         
         const idxArea = encabezados.findIndex(h => h.trim().toUpperCase().includes('AREA'));
         const idxPlana = encabezados.findIndex(h => h.trim().toUpperCase().includes('PLANA'));
-        const idxProfesor = encabezados.findIndex(h => h.trim().toUpperCase().includes('PROFESOR'));
+        const idxProfesor = encabezados.findIndex(h => h.trim().toUpperCase().includes('PROFESOR') || h.trim().toUpperCase().includes('DOCENTE'));
         const idxEncuestas = encabezados.findIndex(h => h.trim().toUpperCase().includes('CANTIDAD DE ENCUESTAS') || h.trim().toUpperCase().includes('ENCUESTAS'));
         const idxPromedio = encabezados.findIndex(h => h.trim().toUpperCase().includes('PROMEDIO CON 5D') || h.trim().toUpperCase().includes('PROMEDIO'));
         const idxOrden = encabezados.findIndex(h => h.trim().toUpperCase().includes('ORDEN PLANA') || h.trim().toUpperCase().includes('ORDEN'));
@@ -612,30 +686,10 @@
         return datos;
     }
 
-    function parseCSVLinea(linea) {
-        const resultado = [];
-        let dentroComillas = false;
-        let campoActual = '';
-        for (let i = 0; i < linea.length; i++) {
-            const char = linea[i];
-            if (char === '"') {
-                dentroComillas = !dentroComillas;
-            } else if (char === ',' && !dentroComillas) {
-                resultado.push(campoActual);
-                campoActual = '';
-            } else {
-                campoActual += char;
-            }
-        }
-        resultado.push(campoActual);
-        return resultado;
-    }
-
-    // Datos de ejemplo (fallback)
     const datosEjemplo = (function generarEjemplo() {
         const areasPlanas = {
             'Matemática': ['Álgebra', 'Aritmética', 'Geometría', 'Razonamiento Matemático', 'Trigonometría'],
-            'Comunicación': ['Lenguaje', 'Literatura', 'Razonamiento Verbal', 'Teatro'],
+            'Comunicación': ['Lenguaje', 'Literatura', 'Razonamiento Verbal', 'Teatro', 'Inglés'],
             'Ciencias Sociales': ['Economía', 'Geografía', 'Historia del Perú', 'Historia Universal', 'Psicología', 'Valores'],
             'Ciencia y Tecnología': ['Biología', 'Física', 'Química']
         };
@@ -661,17 +715,63 @@
         return ej;
     })();
 
-    function renderDashboard(datos) {
-        profesores = datos;
-        profesoresOriginal = [...datos];
+    function actualizarSelectPlana() {
+        const planasUnicas = [...new Set(profesores.map(p => p.plana))].sort();
+        const select = document.getElementById('filtroPlanaSelect');
+        select.innerHTML = '<option value="__ALL__">📋 Todas las planas</option>' + 
+            planasUnicas.map(p => `<option value="${escapeHtml(p)}">${p}</option>`).join('');
+        if (currentPlanaFilter !== "__ALL__" && planasUnicas.includes(currentPlanaFilter)) {
+            select.value = currentPlanaFilter;
+        } else {
+            select.value = "__ALL__";
+            currentPlanaFilter = "__ALL__";
+        }
+    }
 
-        const totalDocentes = profesores.length;
-        const totalEncuestas = profesores.reduce((acc, p) => acc + p.encuestas, 0);
-        const promedioGlobal = totalDocentes > 0 ? (profesores.reduce((acc, p) => acc + p.promedio, 0) / totalDocentes).toFixed(2) : "0.00";
-        const countInicio = profesores.filter(p => p.categoria === 'inicio').length;
-        const countProceso = profesores.filter(p => p.categoria === 'proceso').length;
-        const countLogrado = profesores.filter(p => p.categoria === 'logrado').length;
-        const countDestacado = profesores.filter(p => p.categoria === 'destacado').length;
+    function escapeHtml(str) {
+        return String(str).replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    function obtenerDatosFiltrados() {
+        let filtrados = [...profesoresOriginal];
+        
+        if (currentPlanaFilter !== "__ALL__") {
+            filtrados = filtrados.filter(p => p.plana === currentPlanaFilter);
+        }
+        
+        if (currentNivelFilter !== "todos") {
+            filtrados = filtrados.filter(p => p.categoria === currentNivelFilter);
+        }
+        
+        return filtrados;
+    }
+
+    function aplicarFiltrosYRenderizar() {
+        const datosFiltrados = obtenerDatosFiltrados();
+        profesores = datosFiltrados;
+        
+        actualizarDashboard(profesores);
+        
+        document.querySelectorAll('.btn-filtro').forEach(btn => {
+            const filtro = btn.dataset.filtro;
+            if (filtro === currentNivelFilter) btn.classList.add('activo');
+            else btn.classList.remove('activo');
+        });
+    }
+
+    function actualizarDashboard(datos) {
+        const totalDocentes = datos.length;
+        const totalEncuestas = datos.reduce((acc, p) => acc + p.encuestas, 0);
+        const promedioGlobal = totalDocentes > 0 ? (datos.reduce((acc, p) => acc + p.promedio, 0) / totalDocentes).toFixed(2) : "0.00";
+        const countInicio = datos.filter(p => p.categoria === 'inicio').length;
+        const countProceso = datos.filter(p => p.categoria === 'proceso').length;
+        const countLogrado = datos.filter(p => p.categoria === 'logrado').length;
+        const countDestacado = datos.filter(p => p.categoria === 'destacado').length;
 
         document.getElementById('kpiContainer').innerHTML = `
             <div class="kpi-card"><div class="kpi-title"><i class="fa-regular fa-user"></i> Docentes</div><div class="kpi-value">${totalDocentes}</div><div class="kpi-foot">registros</div></div>
@@ -691,11 +791,11 @@
             options: { cutout: '65%', responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 14 } } } }
         });
 
-        const areas = [...new Set(profesores.map(p => p.area))].sort();
-        const inicioPorArea = areas.map(area => profesores.filter(p => p.area === area && p.categoria === 'inicio').length);
-        const procesoPorArea = areas.map(area => profesores.filter(p => p.area === area && p.categoria === 'proceso').length);
-        const logradoPorArea = areas.map(area => profesores.filter(p => p.area === area && p.categoria === 'logrado').length);
-        const destacadoPorArea = areas.map(area => profesores.filter(p => p.area === area && p.categoria === 'destacado').length);
+        const areas = [...new Set(datos.map(p => p.area))].sort();
+        const inicioPorArea = areas.map(area => datos.filter(p => p.area === area && p.categoria === 'inicio').length);
+        const procesoPorArea = areas.map(area => datos.filter(p => p.area === area && p.categoria === 'proceso').length);
+        const logradoPorArea = areas.map(area => datos.filter(p => p.area === area && p.categoria === 'logrado').length);
+        const destacadoPorArea = areas.map(area => datos.filter(p => p.area === area && p.categoria === 'destacado').length);
 
         const ctx2 = document.getElementById('nivelesAreaChart').getContext('2d');
         if (window.nivelesAreaChart instanceof Chart) window.nivelesAreaChart.destroy();
@@ -714,7 +814,7 @@
         });
 
         const planasPromMap = new Map();
-        profesores.forEach(p => {
+        datos.forEach(p => {
             const key = `${p.area} - ${p.plana}`;
             if (!planasPromMap.has(key)) planasPromMap.set(key, { suma: 0, count: 0 });
             const item = planasPromMap.get(key);
@@ -730,8 +830,8 @@
             options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { max: 10, min: 0 } } }
         });
 
-        actualizarTabla(profesores);
-        renderizarTarjetas(profesoresOriginal);
+        actualizarTabla(datos);
+        renderizarTarjetas(profesoresOriginal, datos);
     }
 
     function actualizarTabla(datosOrdenados) {
@@ -753,25 +853,39 @@
             `;
         });
         tablaBody.innerHTML = tablaFilas;
-        const filtroActivo = document.querySelector('.btn-filtro.activo')?.dataset.filtro || 'todos';
-        aplicarFiltro(filtroActivo);
     }
 
-    function renderizarTarjetas(datosOriginales) {
+    function renderizarTarjetas(datosOriginales, datosFiltrados) {
         const areasContainer = document.getElementById('areasContainer');
         const areasUnicas = [...new Set(datosOriginales.map(p => p.area))].sort();
         let areasHtml = '';
+        
         areasUnicas.forEach(area => {
             const planasEnArea = [...new Set(datosOriginales.filter(p => p.area === area).map(p => p.plana))].sort();
             let planasHtml = '<div class="plana-grid">';
+            
             planasEnArea.forEach(plana => {
-                const profesPlana = datosOriginales.filter(p => p.area === area && p.plana === plana).sort((a,b) => a.orden - b.orden);
+                let profesPlana = datosOriginales.filter(p => p.area === area && p.plana === plana).sort((a,b) => a.orden - b.orden);
+                
+                if (currentPlanaFilter !== "__ALL__" && plana !== currentPlanaFilter) {
+                    if (currentPlanaFilter !== plana) {
+                        planasHtml += '';
+                        return;
+                    }
+                }
+                
+                if (currentNivelFilter !== "todos") {
+                    profesPlana = profesPlana.filter(p => p.categoria === currentNivelFilter);
+                }
+                
+                if (profesPlana.length === 0) return;
+                
                 let filas = '';
                 profesPlana.forEach(prof => {
                     const catClass = prof.categoria;
                     const nivelTexto = { inicio: 'En Inicio', proceso: 'En Proceso', logrado: 'Logrado', destacado: 'Logro Destacado' }[prof.categoria];
                     filas += `
-                        <div class="profesor-row" data-categoria="${prof.categoria}">
+                        <div class="profesor-row-card" data-categoria="${prof.categoria}">
                             <div class="profesor-nombre"><i class="fa-regular fa-circle-user"></i> ${prof.profesor}</div>
                             <div class="encuestas"><i class="fa-regular fa-file-lines"></i> ${prof.encuestas}</div>
                             <div><span class="ponderado ${catClass}" title="${nivelTexto}">${prof.promedio.toFixed(2)}</span></div>
@@ -779,6 +893,7 @@
                         </div>
                     `;
                 });
+                
                 const promedioPlana = profesPlana.length > 0 ? (profesPlana.reduce((acc, p) => acc + p.promedio, 0) / profesPlana.length).toFixed(2) : "0.00";
                 planasHtml += `
                     <div class="plana-card">
@@ -791,26 +906,44 @@
                 `;
             });
             planasHtml += '</div>';
+            if (!planasHtml.includes('plana-card')) return;
             areasHtml += `<div class="area-card"><div class="area-header"><i class="fa-solid fa-chart-simple"></i><h2>${area}</h2></div>${planasHtml}</div>`;
         });
-        areasContainer.innerHTML = areasHtml;
+        areasContainer.innerHTML = areasHtml || '<div style="text-align:center; padding:40px;">No hay registros con los filtros seleccionados</div>';
     }
 
-    function aplicarFiltro(categoria) {
-        document.querySelectorAll('.btn-filtro').forEach(btn => {
-            const filtro = btn.dataset.filtro;
-            if (filtro === categoria) btn.classList.add('activo');
-            else btn.classList.remove('activo');
-        });
-        document.querySelectorAll('.profesor-row').forEach(fila => {
-            if (categoria === 'todos') fila.classList.remove('filtro-oculto');
-            else fila.classList.toggle('filtro-oculto', fila.dataset.categoria !== categoria);
-        });
+    function ordenarPorOriginal() { 
+        document.querySelectorAll('.btn-orden').forEach(btn => btn.classList.remove('activo')); 
+        document.getElementById('ordenOriginalBtn').classList.add('activo'); 
+        const datosFiltrados = obtenerDatosFiltrados();
+        actualizarTabla(datosFiltrados);
+    }
+    
+    function ordenarPorPromedioAsc() { 
+        document.querySelectorAll('.btn-orden').forEach(btn => btn.classList.remove('activo')); 
+        document.getElementById('ordenPromAscBtn').classList.add('activo'); 
+        const datosFiltrados = obtenerDatosFiltrados();
+        const copia = [...datosFiltrados];
+        copia.sort((a, b) => a.promedio - b.promedio);
+        actualizarTabla(copia);
+    }
+    
+    function ordenarPorPromedioDesc() { 
+        document.querySelectorAll('.btn-orden').forEach(btn => btn.classList.remove('activo')); 
+        document.getElementById('ordenPromDescBtn').classList.add('activo'); 
+        const datosFiltrados = obtenerDatosFiltrados();
+        const copia = [...datosFiltrados];
+        copia.sort((a, b) => b.promedio - a.promedio);
+        actualizarTabla(copia);
     }
 
-    function ordenarPorOriginal() { document.querySelectorAll('.btn-orden').forEach(btn => btn.classList.remove('activo')); document.getElementById('ordenOriginalBtn').classList.add('activo'); actualizarTabla(profesoresOriginal); }
-    function ordenarPorPromedioAsc() { document.querySelectorAll('.btn-orden').forEach(btn => btn.classList.remove('activo')); document.getElementById('ordenPromAscBtn').classList.add('activo'); const copia = [...profesoresOriginal]; copia.sort((a, b) => a.promedio - b.promedio); actualizarTabla(copia); }
-    function ordenarPorPromedioDesc() { document.querySelectorAll('.btn-orden').forEach(btn => btn.classList.remove('activo')); document.getElementById('ordenPromDescBtn').classList.add('activo'); const copia = [...profesoresOriginal]; copia.sort((a, b) => b.promedio - a.promedio); actualizarTabla(copia); }
+    function resetearFiltros() {
+        currentPlanaFilter = "__ALL__";
+        currentNivelFilter = "todos";
+        document.getElementById('filtroPlanaSelect').value = "__ALL__";
+        profesores = [...profesoresOriginal];
+        aplicarFiltrosYRenderizar();
+    }
 
     async function cargarDatosDesdeURL() {
         const loadingIndicator = document.getElementById('loadingIndicator');
@@ -822,26 +955,40 @@
             const datos = parseCSV(csvText);
             if (datos.length === 0) {
                 console.warn('No se encontraron datos en el CSV, usando datos de ejemplo');
-                renderDashboard(datosEjemplo);
+                profesoresOriginal = datosEjemplo;
             } else {
-                renderDashboard(datos);
+                profesoresOriginal = datos;
             }
+            profesores = [...profesoresOriginal];
+            actualizarSelectPlana();
+            aplicarFiltrosYRenderizar();
         } catch (e) {
             console.error('Error cargando CSV:', e);
             alert('No se pudieron cargar los datos desde Google Sheets. Se mostrarán datos de ejemplo.\nVerifica que la hoja esté publicada como CSV.');
-            renderDashboard(datosEjemplo);
+            profesoresOriginal = datosEjemplo;
+            profesores = [...profesoresOriginal];
+            actualizarSelectPlana();
+            aplicarFiltrosYRenderizar();
         } finally {
             loadingIndicator.classList.remove('show');
         }
     }
 
-    // Eventos
-    document.querySelectorAll('.btn-filtro').forEach(btn => btn.addEventListener('click', (e) => aplicarFiltro(e.currentTarget.dataset.filtro)));
+    document.querySelectorAll('.btn-filtro').forEach(btn => btn.addEventListener('click', (e) => {
+        currentNivelFilter = e.currentTarget.dataset.filtro;
+        aplicarFiltrosYRenderizar();
+    }));
+    
+    document.getElementById('filtroPlanaSelect').addEventListener('change', (e) => {
+        currentPlanaFilter = e.target.value;
+        aplicarFiltrosYRenderizar();
+    });
+    
+    document.getElementById('resetFiltrosBtn').addEventListener('click', resetearFiltros);
     document.getElementById('ordenOriginalBtn').addEventListener('click', ordenarPorOriginal);
     document.getElementById('ordenPromAscBtn').addEventListener('click', ordenarPorPromedioAsc);
     document.getElementById('ordenPromDescBtn').addEventListener('click', ordenarPorPromedioDesc);
 
-    // Carga automática al iniciar
     cargarDatosDesdeURL();
 })();
 </script>
